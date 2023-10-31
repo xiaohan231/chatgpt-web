@@ -36,6 +36,8 @@ export class UserInfo {
   updateTime?: string
   config?: UserConfig
   roles?: UserRole[]
+  remark?: string
+  secretKey?: string // 2fa
   constructor(email: string, password: string) {
     this.name = email
     this.email = email
@@ -45,6 +47,7 @@ export class UserInfo {
     this.verifyTime = null
     this.updateTime = new Date().toLocaleString()
     this.roles = [UserRole.User]
+    this.remark = null
   }
 }
 

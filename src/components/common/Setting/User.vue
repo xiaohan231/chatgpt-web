@@ -2,7 +2,7 @@
 import { h, onMounted, reactive, ref } from 'vue'
 import { NButton, NDataTable, NInput, NModal, NSelect, NSpace, NTag, useDialog, useMessage } from 'naive-ui'
 import { Status, UserInfo, UserRole, userRoleOptions } from './model'
-import { fetchGetUsers, fetchUpdateUser, fetchUpdateUserStatus } from '@/api'
+import { fetchDisableUser2FAByAdmin, fetchGetUsers, fetchUpdateUser, fetchUpdateUserStatus } from '@/api'
 import { t } from '@/locales'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 
@@ -66,6 +66,11 @@ const columns = [
     },
   },
   {
+    title: 'Remark',
+    key: 'remark',
+    width: 220,
+  },
+  {
     title: 'Action',
     key: '_id',
     width: 220,
@@ -106,6 +111,17 @@ const columns = [
             onClick: () => handleUpdateUserStatus(row._id, Status.Normal),
           },
           { default: () => t('chat.verifiedUser') },
+        ))
+      }
+      if (row.secretKey) {
+        actions.push(h(
+          NButton,
+          {
+            size: 'small',
+            type: 'warning',
+            onClick: () => handleDisable2FA(row._id),
+          },
+          { default: () => t('chat.disable2FA') },
         ))
       }
       return actions
@@ -168,6 +184,20 @@ async function handleUpdateUserStatus(userId: string, status: Status) {
     ms.info('OK')
     await handleGetUsers(pagination.page)
   }
+}
+
+async function handleDisable2FA(userId: string) {
+  dialog.warning({
+    title: t('chat.deleteUser'),
+    content: t('chat.deleteUserConfirm'),
+    positiveText: t('common.yes'),
+    negativeText: t('common.no'),
+    onPositiveClick: async () => {
+      const result = await fetchDisableUser2FAByAdmin(userId)
+      ms.success(result.message as string)
+      await handleGetUsers(pagination.page)
+    },
+  })
 }
 
 function handleNewUser() {
@@ -256,6 +286,15 @@ onMounted(async () => {
               :value="userRef.roles"
               :options="userRoleOptions"
               @update-value="value => userRef.roles = value"
+            />
+          </div>
+        </div>
+        <div class="flex items-center space-x-4">
+          <span class="flex-shrink-0 w-[100px]">{{ $t('setting.remark') }}</span>
+          <div class="flex-1">
+            <NInput
+              v-model:value="userRef.remark" type="textarea"
+              :autosize="{ minRows: 1, maxRows: 2 }" placeholder=""
             />
           </div>
         </div>
