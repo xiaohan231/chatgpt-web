@@ -7,6 +7,7 @@ export default {
     delete: '刪除',
     deleteSuccess: '刪除成功',
     save: '儲存',
+    sync: '儲存並同步所有人',
     test: '测试',
     saveSuccess: '儲存成功',
     reset: '重置',
@@ -141,6 +142,7 @@ export default {
     userRoles: '用戶權限',
     status: '狀態',
     chatModels: '對話模型',
+    defaultChatModel: '預設對話模型',
     remark: '備註',
     email: '電子郵箱',
     password: '密碼',
@@ -167,6 +169,7 @@ export default {
     info2FAStep3Tip1: '注意：如何关闭两步验证？',
     info2FAStep3Tip2: '1. 登录后，在 两步验证 页面使用两步验证码关闭。',
     info2FAStep3Tip3: '2. 联系管理员来关闭两步验证。',
+    maxContextCount: '最大上下文数量',
   },
   store: {
     siderButton: '提示詞商店',

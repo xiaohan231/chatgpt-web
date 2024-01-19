@@ -38,6 +38,7 @@ export class UserInfo {
   roles?: UserRole[]
   remark?: string
   secretKey?: string // 2fa
+  advanced?: AdvancedConfig
   constructor(email: string, password: string) {
     this.name = email
     this.email = email
@@ -66,14 +67,14 @@ export class ChatRoom {
   // only access token used
   accountId?: string
   chatModel: string
-  constructor(userId: string, title: string, roomId: number) {
+  constructor(userId: string, title: string, roomId: number, chatModel: string) {
     this.userId = userId
     this.title = title
     this.prompt = undefined
     this.roomId = roomId
     this.usingContext = true
     this.accountId = null
-    this.chatModel = null
+    this.chatModel = chatModel
   }
 }
 
@@ -165,6 +166,7 @@ export class Config {
     public siteConfig?: SiteConfig,
     public mailConfig?: MailConfig,
     public auditConfig?: AuditConfig,
+    public advancedConfig?: AdvancedConfig,
   ) { }
 }
 
@@ -202,6 +204,15 @@ export class AuditConfig {
   ) { }
 }
 
+export class AdvancedConfig {
+  constructor(
+    public systemMessage: string,
+    public temperature: number,
+    public top_p: number,
+    public maxContextCount: number,
+  ) { }
+}
+
 export enum TextAudioType {
   None = 0,
   Request = 1 << 0, // 二进制 01
@@ -217,6 +228,7 @@ export class KeyConfig {
   userRoles: UserRole[]
   status: Status
   remark: string
+  baseUrl?: string
   constructor(key: string, keyModel: APIMODEL, chatModels: string[], userRoles: UserRole[], remark: string) {
     this.key = key
     this.keyModel = keyModel
