@@ -42,8 +42,9 @@ export async function getOriginConfig() {
         : '',
       process.env.HTTPS_PROXY,
       new SiteConfig(
-        process.env.SITE_TITLE || 'ChatGpt Web',
+        process.env.SITE_TITLE || 'ChatGPT Web',
         isNotEmptyString(process.env.AUTH_SECRET_KEY),
+        process.env.AUTH_PROXY_ENABLED === 'true',
         process.env.AUTH_SECRET_KEY,
         process.env.REGISTER_ENABLED === 'true',
         process.env.REGISTER_REVIEW === 'true',
@@ -58,6 +59,8 @@ export async function getOriginConfig() {
   else {
     if (config.siteConfig.loginEnabled === undefined)
       config.siteConfig.loginEnabled = isNotEmptyString(process.env.AUTH_SECRET_KEY)
+    if (config.siteConfig.authProxyEnabled === undefined)
+      config.siteConfig.authProxyEnabled = process.env.AUTH_PROXY_ENABLED === 'true'
     if (config.siteConfig.loginSalt === undefined)
       config.siteConfig.loginSalt = process.env.AUTH_SECRET_KEY
     if (config.apiDisableDebug === undefined)
@@ -104,7 +107,7 @@ export async function getOriginConfig() {
   }
 
   if (!isNotEmptyString(config.siteConfig.chatModels))
-    config.siteConfig.chatModels = 'gpt-3.5-turbo,gpt-3.5-turbo-1106,gpt-3.5-turbo-16k,gpt-3.5-turbo-16k-0613,gpt-4,gpt-4-0613,gpt-4-32k,gpt-4-32k-0613,text-davinci-002-render-sha-mobile,text-embedding-ada-002,gpt-4-mobile,gpt-4-browsing,gpt-4-1106-preview,gpt-4-vision-preview'
+    config.siteConfig.chatModels = 'gpt-3.5-turbo,gpt-4-turbo-preview,gpt-4-vision-preview'
 
   return config
 }
@@ -177,3 +180,5 @@ export async function getApiKeys() {
   })
   return result
 }
+
+export const authProxyHeaderName = process.env.AUTH_PROXY_HEADER_NAME ?? 'X-Email'

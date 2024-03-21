@@ -58,6 +58,7 @@ import { hasAnyRole, isEmail, isNotEmptyString } from './utils/is'
 import { sendNoticeMail, sendResetPasswordMail, sendTestMail, sendVerifyMail, sendVerifyMailAdmin } from './utils/mail'
 import { checkUserResetPassword, checkUserVerify, checkUserVerifyAdmin, getUserResetPasswordUrl, getUserVerifyUrl, getUserVerifyUrlAdmin, md5 } from './utils/security'
 import { isAdmin, rootAuth } from './middleware/rootAuth'
+import { router as uploadRouter } from './routes/upload'
 
 dotenv.config()
 
@@ -66,6 +67,8 @@ const router = express.Router()
 
 app.use(express.static('public'))
 app.use(express.json())
+
+app.use('/uploads', express.static('uploads'))
 
 app.all('*', (_, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
@@ -212,6 +215,7 @@ router.get('/chat-history', auth, async (req, res) => {
           uuid: c.uuid,
           dateTime: new Date(c.dateTime).toLocaleString(),
           text: c.prompt,
+          images: c.images,
           inversion: true,
           error: false,
           conversationOptions: null,
@@ -371,8 +375,9 @@ router.post('/chat-clear', auth, async (req, res) => {
 router.post('/chat-process', [auth, limiter], async (req, res) => {
   res.setHeader('Content-type', 'application/octet-stream')
 
-  let { roomId, uuid, regenerate, prompt, options = {}, systemMessage, temperature, top_p } = req.body as RequestProps
-  const userId = req.headers.userId as string
+  let { roomId, uuid, regenerate, prompt, uploadFileKeys, options = {}, systemMessage, temperature, top_p } = req.body as RequestProps
+  const userId = req.headers.userId.toString()
+  const config = await getCacheConfig()
   const room = await getChatRoom(userId, roomId)
   if (room == null)
     globalThis.console.error(`Unable to get chat room \t ${userId}\t ${roomId}`)
@@ -383,19 +388,19 @@ router.post('/chat-process', [auth, limiter], async (req, res) => {
   let message: ChatInfo
   let user = await getUserById(userId)
   try {
-    const config = await getCacheConfig()
-    const userId = req.headers.userId.toString()
-    // 在调用前判断对话额度是否够用
-    const useAmount = user ? (user.useAmount ?? 0) : 0
-
-    // if use the fixed fakeuserid(some probability of duplicated with real ones), redefine user which is send to chatReplyProcess
-    if (userId === '6406d8c50aedd633885fa16f')
+    // If use the fixed fakeuserid(some probability of duplicated with real ones), redefine user which is send to chatReplyProcess
+    if (userId === '6406d8c50aedd633885fa16f') {
       user = { _id: userId, roles: [UserRole.User], useAmount: 999, advanced: { maxContextCount: 999 }, limit_switch: false } as UserInfo
-
-    // report if useamount is 0, 6406d8c50aedd633885fa16f is the fakeuserid in nologin situation
-    if (userId !== '6406d8c50aedd633885fa16f' && Number(useAmount) <= 0 && user.limit_switch) {
-      res.send({ status: 'Fail', message: '提问次数用完啦 | Question limit reached', data: null })
-      return
+    }
+    else {
+      // If global usage count limit is enabled, check can use amount before process chat.
+      if (config.siteConfig?.usageCountLimit) {
+        const useAmount = user ? (user.useAmount ?? 0) : 0
+        if (Number(useAmount) <= 0 && user.limit_switch) {
+          res.send({ status: 'Fail', message: '提问次数用完啦 | Question limit reached', data: null })
+          return
+        }
+      }
     }
 
     if (config.auditConfig.enabled || config.auditConfig.customizeEnabled) {
@@ -407,10 +412,11 @@ router.post('/chat-process', [auth, limiter], async (req, res) => {
 
     message = regenerate
       ? await getChat(roomId, uuid)
-      : await insertChat(uuid, prompt, roomId, options as ChatOptions)
+      : await insertChat(uuid, prompt, uploadFileKeys, roomId, options as ChatOptions)
     let firstChunk = true
     result = await chatReplyProcess({
       message: prompt,
+      uploadFileKeys,
       lastContext: options,
       process: (chat: ChatMessage) => {
         lastResponse = chat
@@ -496,8 +502,10 @@ router.post('/chat-process', [auth, limiter], async (req, res) => {
       }
       // update personal useAmount moved here
       // if not fakeuserid, and has valid user info and valid useAmount set by admin nut null and limit is enabled
-      if (userId !== '6406d8c50aedd633885fa16f' && user && user.useAmount && user.limit_switch)
-        await updateAmountMinusOne(userId)
+      if (config.siteConfig?.usageCountLimit) {
+        if (userId !== '6406d8c50aedd633885fa16f' && user && user.useAmount && user.limit_switch)
+          await updateAmountMinusOne(userId)
+      }
     }
     catch (error) {
       globalThis.console.error(error)
@@ -594,8 +602,9 @@ router.post('/config', rootAuth, async (req, res) => {
 router.post('/session', async (req, res) => {
   try {
     const config = await getCacheConfig()
-    const hasAuth = config.siteConfig.loginEnabled
-    const allowRegister = (await getCacheConfig()).siteConfig.registerEnabled
+    const hasAuth = config.siteConfig.loginEnabled || config.siteConfig.authProxyEnabled
+    const authProxyEnabled = config.siteConfig.authProxyEnabled
+    const allowRegister = config.siteConfig.registerEnabled
     if (config.apiModel !== 'ChatGPTAPI' && config.apiModel !== 'ChatGPTUnofficialProxyAPI')
       config.apiModel = 'ChatGPTAPI'
     const userId = await getUserId(req)
@@ -678,11 +687,13 @@ router.post('/session', async (req, res) => {
         message: '',
         data: {
           auth: hasAuth,
+          authProxyEnabled,
           allowRegister,
           model: config.apiModel,
           title: config.siteConfig.siteTitle,
           chatModels,
           allChatModels: chatModelOptions,
+          usageCountLimit: config.siteConfig?.usageCountLimit,
           userInfo,
         },
       })
@@ -694,6 +705,7 @@ router.post('/session', async (req, res) => {
       message: '',
       data: {
         auth: hasAuth,
+        authProxyEnabled,
         allowRegister,
         model: config.apiModel,
         title: config.siteConfig.siteTitle,
@@ -753,6 +765,10 @@ router.post('/user-login', authLimiter, async (req, res) => {
   catch (error) {
     res.send({ status: 'Fail', message: error.message, data: null })
   }
+})
+
+router.post('/user-logout', async (req, res) => {
+  res.send({ status: 'Success', message: '退出登录成功 | Logout successful', data: null })
 })
 
 router.post('/user-send-reset-mail', authLimiter, async (req, res) => {
@@ -830,10 +846,11 @@ router.get('/user-getamtinfo', auth, async (req, res) => {
   try {
     const userId = req.headers.userId as string
     const user = await getUserById(userId)
-    if (user.limit_switch)
-      res.send({ status: 'Success', message: null, data: user.useAmount })
-    else
-      res.send({ status: 'Success', message: null, data: 99999 })
+    const data = {
+      amount: user.useAmount,
+      limit: user.limit_switch,
+    }
+    res.send({ status: 'Success', message: null, data })
   }
   catch (error) {
     console.error(error)
@@ -918,7 +935,7 @@ router.post('/user-edit', rootAuth, async (req, res) => {
     }
     else {
       const newPassword = md5(password)
-      const user = await createUser(email, newPassword, roles, remark, Number(useAmount), limit_switch)
+      const user = await createUser(email, newPassword, roles, null, remark, Number(useAmount), limit_switch)
       await updateUserStatus(user._id.toString(), Status.Normal)
     }
     res.send({ status: 'Success', message: '更新成功 | Update successfully' })
@@ -1287,6 +1304,9 @@ router.post('/statistics/by-day', auth, async (req, res) => {
     res.send(error)
   }
 })
+
+app.use('', uploadRouter)
+app.use('/api', uploadRouter)
 
 app.use('', router)
 app.use('/api', router)

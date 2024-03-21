@@ -80,7 +80,9 @@ export default {
     disable2FAConfirm: 'Are you sure to disable 2FA for this user?',
   },
   setting: {
+    globalAmount: 'Global Usage Amount for New User',
     limit_switch: 'Open Usage Limitation',
+    usageCountLimit: 'Enable Usage Count Limit',
     redeemCardNo: 'Redeem CardNo',
     useAmount: 'No. of questions',
     setting: 'Setting',
