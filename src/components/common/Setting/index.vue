@@ -8,10 +8,12 @@ import About from './About.vue'
 import Site from './Site.vue'
 import Mail from './Mail.vue'
 import Audit from './Audit.vue'
+import Gift from './Gift.vue'
 import User from './User.vue'
 import Key from './Keys.vue'
 import Password from './Password.vue'
 import TwoFA from './TwoFA.vue'
+import Announcement from './Anonuncement.vue'
 import { SvgIcon } from '@/components/common'
 import { useAuthStore, useUserStore } from '@/store'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
@@ -105,6 +107,13 @@ const show = computed({
           </template>
           <Site />
         </NTabPane>
+        <NTabPane v-if="userStore.userInfo.root" name="AnnounceConfig" tab="AnnounceConfig">
+          <template #tab>
+            <SvgIcon class="text-lg" icon="ri:settings-line" />
+            <span class="ml-2">{{ $t('setting.announceConfig') }}</span>
+          </template>
+          <Announcement />
+        </NTabPane>
         <NTabPane v-if="userStore.userInfo.root" name="MailConfig" tab="MailConfig">
           <template #tab>
             <SvgIcon class="text-lg" icon="ri:mail-line" />
@@ -132,6 +141,13 @@ const show = computed({
             <span class="ml-2">{{ $t('setting.keysConfig') }}</span>
           </template>
           <Key />
+        </NTabPane>
+        <NTabPane v-if="userStore.userInfo.root" name="GiftCardConfig" tab="GiftCardConfig">
+          <template #tab>
+            <SvgIcon class="text-lg" icon="mdi-gift" />
+            <span class="ml-2">{{ $t('setting.uploadgifts') }}</span>
+          </template>
+          <Gift />
         </NTabPane>
       </NTabs>
     </div>

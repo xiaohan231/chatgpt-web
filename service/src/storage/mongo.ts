@@ -67,6 +67,17 @@ export async function updateAmountMinusOne(userId: string) {
   return result.modifiedCount > 0
 }
 
+// update giftcards database
+export async function updateGiftCards(data: GiftCard[], overRide = true) {
+  if (overRide) {
+    // i am not sure is there a drop option for the node driver reference https://mongodb.github.io/node-mongodb-native/6.4/
+    // await redeemCol.deleteMany({})
+    await redeemCol.drop()
+  }
+  const insertResult = await redeemCol.insertMany(data)
+  return insertResult
+}
+
 export async function insertChat(uuid: number, text: string, images: string[], roomId: number, options?: ChatOptions) {
   const chatInfo = new ChatInfo(roomId, uuid, text, images, options)
   await chatCol.insertOne(chatInfo)
@@ -102,8 +113,13 @@ export async function updateChat(chatId: string, response: string, messageId: st
   await chatCol.updateOne(query, update)
 }
 
-export async function insertChatUsage(userId: ObjectId, roomId: number, chatId: ObjectId, messageId: string, usage: UsageResponse) {
-  const chatUsage = new ChatUsage(userId, roomId, chatId, messageId, usage)
+export async function insertChatUsage(userId: ObjectId,
+  roomId: number,
+  chatId: ObjectId,
+  messageId: string,
+  model: string,
+  usage: UsageResponse) {
+  const chatUsage = new ChatUsage(userId, roomId, chatId, messageId, model, usage)
   await usageCol.insertOne(chatUsage)
   return chatUsage
 }

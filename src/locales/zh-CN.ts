@@ -80,6 +80,11 @@ export default {
     disable2FAConfirm: '您确定要为此用户禁用两步验证吗？?',
   },
   setting: {
+    overRide: '开启覆写',
+    uploadgifts: '上传兑换码',
+    announceConfig: '网站公告',
+    announceEnabled: '公告开关',
+    announceWords: '公告内容',
     globalAmount: '新用户全局次数设置',
     limit_switch: '打开次数限制',
     usageCountLimit: '使用次数限制',
@@ -179,6 +184,7 @@ export default {
     info2FAStep3Tip2: '1. 登录后，在 两步验证 页面使用两步验证码关闭。',
     info2FAStep3Tip3: '2. 联系管理员来关闭两步验证。',
     maxContextCount: '最大上下文数量',
+    fastDelMsg: '快速删除消息',
   },
   store: {
     siderButton: '提示词商店',

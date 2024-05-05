@@ -80,6 +80,11 @@ export default {
     disable2FAConfirm: 'Are you sure to disable 2FA for this user?',
   },
   setting: {
+    overRide: 'Enable Override',
+    uploadgifts: 'Upload Redemption Code',
+    announceConfig: 'Announcement',
+    announceEnabled: 'Open Announcement',
+    announceWords: 'Announcement Content',
     globalAmount: 'Global Usage Amount for New User',
     limit_switch: 'Open Usage Limitation',
     usageCountLimit: 'Enable Usage Count Limit',
@@ -179,6 +184,7 @@ export default {
     info2FAStep3Tip2: '1. After logging in, use the two-step verification on the Two-Step Verification page to disable it.',
     info2FAStep3Tip3: '2. Contact the administrator to disable two-step verification.',
     maxContextCount: 'Max Context Count',
+    fastDelMsg: 'Fast Delete Message',
   },
   store: {
     siderButton: 'Prompt Store',
