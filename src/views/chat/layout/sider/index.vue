@@ -1,13 +1,14 @@
 <script setup lang='ts'>
-import { CSSProperties, computed, onMounted, ref, watch } from 'vue'
+import type { CSSProperties } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { NButton, NLayoutSider, NModal } from 'naive-ui'
 import List from './List.vue'
 import Footer from './Footer.vue'
 import { useAppStore, useAuthStore, useChatStore } from '@/store'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
-import { GithubSite, PromptStore } from '@/components/common'
+import { GithubSite, PromptStore, Watermark } from '@/components/common'
 import { fetchAnnouncement } from '@/api'
-import { AnnounceConfig } from '@/components/common/Setting/model'
+import type { AnnounceConfig } from '@/components/common/Setting/model'
 
 const config = ref<AnnounceConfig>()
 
@@ -63,17 +64,17 @@ watch(
 const notice_text = ref('')
 const showNotice = ref(false)
 
-const closeModal = () => {
+function closeModal() {
   showNotice.value = false
 }
 
-const doNotShowToday = () => {
+function doNotShowToday() {
   const today = new Date().toDateString()
   localStorage.setItem('announcementLastClosed', today)
   closeModal()
 }
 
-const checkDoNotShowToday = () => {
+function checkDoNotShowToday() {
   const today = new Date().toDateString()
   const lastClosed = localStorage.getItem('announcementLastClosed')
   if (lastClosed === today)
@@ -156,6 +157,7 @@ onMounted(async () => {
       </div>
     </div>
   </NModal>
+  <Watermark v-if="authStore.session?.showWatermark" />
 </template>
 
 <style scoped>

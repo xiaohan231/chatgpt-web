@@ -205,6 +205,7 @@ export class SiteConfig {
     public chatModels?: string,
     public globalAmount?: number,
     public usageCountLimit?: boolean,
+    public showWatermark?: boolean,
   ) { }
 }
 
@@ -222,6 +223,7 @@ export class MailConfig {
     public smtpTsl: boolean,
     public smtpUserName: string,
     public smtpPassword: string,
+    public smtpFrom?: string,
   ) { }
 }
 
