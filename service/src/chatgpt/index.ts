@@ -1,5 +1,4 @@
 import * as dotenv from 'dotenv'
-import 'isomorphic-fetch'
 import type { ChatGPTAPIOptions, ChatMessage, SendMessageOptions } from 'chatgpt'
 import { ChatGPTAPI, ChatGPTUnofficialProxyAPI } from 'chatgpt'
 import { SocksProxyAgent } from 'socks-proxy-agent'
@@ -15,7 +14,7 @@ import { getCacheApiKeys, getCacheConfig, getOriginConfig } from '../storage/con
 import { sendResponse } from '../utils'
 import { hasAnyRole, isNotEmptyString } from '../utils/is'
 import type { ChatContext, ChatGPTUnofficialProxyAPIOptions, JWT, ModelConfig } from '../types'
-import { getChatByMessageId, updateRoomAccountId } from '../storage/mongo'
+import { getChatByMessageId, updateRoomAccountId, updateRoomChatModel } from '../storage/mongo'
 import type { RequestOptions } from './types'
 
 const { HttpsProxyAgent } = httpsProxyAgent
@@ -58,31 +57,44 @@ export async function initApi(key: KeyConfig, chatModel: string, maxContextCount
 
     // Set the token limits based on the model's type. This is because different models have different token limits.
     // The token limit includes the token count from both the message array sent and the model response.
-    // 'gpt-35-turbo' has a limit of 4096 tokens, 'gpt-4' and 'gpt-4-32k' have limits of 8192 and 32768 tokens respectively.
-    // Check if the model type is GPT-4-turbo
-    if (model.toLowerCase().includes('1106-preview')) {
-      // If it's a '1106-preview' model, set the maxModelTokens to 131072
-      options.maxModelTokens = 131072
-      options.maxResponseTokens = 32768
-    }
-    // Check if the model type includes '16k'
-    if (model.toLowerCase().includes('16k')) {
-      // If it's a '16k' model, set the maxModelTokens to 16384 and maxResponseTokens to 4096
-      options.maxModelTokens = 16384
+
+    // Check if the model type is GPT-4-turbo or newer
+    if (model.toLowerCase().includes('gpt-4o') || model.toLowerCase().includes('gpt-4-turbo') || model.toLowerCase().includes('-preview')) {
+      // If it's a 'gpt-4o'/'gpt-4-turbo'/'xxxx-preview' model, set the maxModelTokens to 128000
+      options.maxModelTokens = 128000
       options.maxResponseTokens = 4096
-    }
-    else if (model.toLowerCase().includes('32k')) {
-      // If it's a '32k' model, set the maxModelTokens to 32768 and maxResponseTokens to 8192
-      options.maxModelTokens = 32768
-      options.maxResponseTokens = 8192
     }
     else if (model.toLowerCase().includes('gpt-4')) {
       // If it's a 'gpt-4' model, set the maxModelTokens and maxResponseTokens to 8192 and 2048 respectively
       options.maxModelTokens = 8192
       options.maxResponseTokens = 2048
     }
+    // Check if the model type includes 'gpt-3.5-turbo'
+    else if (model.toLowerCase().includes('gpt-3.5-turbo-instruct') || model.toLowerCase().includes('gpt-3.5-turbo-0613')) {
+      // If it's a old 'gpt-3.5-turbo' model, set the maxModelTokens to 4096 and maxResponseTokens to 1024
+      options.maxModelTokens = 4096
+      options.maxResponseTokens = 1024
+    }
+    // Check if the model type includes 'gpt-3.5-turbo'
+    else if (model.toLowerCase().includes('gpt-3.5-turbo')) {
+      // If it's a 'gpt-3.5-turbo' model, set the maxModelTokens to 16385 and maxResponseTokens to 4096
+      options.maxModelTokens = 16385
+      options.maxResponseTokens = 4096
+    }
+    // Check if the model type includes '32k'
+    else if (model.toLowerCase().includes('32k')) {
+      // If it's a '32k' model, set the maxModelTokens to 32768 and maxResponseTokens to 8192
+      options.maxModelTokens = 32768
+      options.maxResponseTokens = 8192
+    }
+    // Check if the model type includes '16k'
+    else if (model.toLowerCase().includes('16k')) {
+      // If it's a '16k' model, set the maxModelTokens to 16385 and maxResponseTokens to 4096
+      options.maxModelTokens = 16385
+      options.maxResponseTokens = 4096
+    }
+    // If none of the above, use the default values
     else {
-      // If none of the above, use the default values, set the maxModelTokens and maxResponseTokens to 8192 and 2048 respectively
       options.maxModelTokens = 4096
       options.maxResponseTokens = 1024
     }
@@ -125,13 +137,14 @@ async function chatReplyProcess(options: RequestOptions) {
     if (!options.room.accountId)
       updateRoomAccountId(userId, options.room.roomId, getAccountId(key.key))
 
-    if (options.lastContext && ((options.lastContext.conversationId && !options.lastContext.parentMessageId)
-      || (!options.lastContext.conversationId && options.lastContext.parentMessageId)))
+    if (options.lastContext && ((options.lastContext.conversationId && !options.lastContext.parentMessageId) || (!options.lastContext.conversationId && options.lastContext.parentMessageId)))
       throw new Error('无法在一个房间同时使用 AccessToken 以及 Api，请联系管理员，或新开聊天室进行对话 | Unable to use AccessToken and Api at the same time in the same room, please contact the administrator or open a new chat room for conversation')
   }
 
-  const { message, uploadFileKeys, lastContext, process, systemMessage, temperature, top_p } = options
+  // Add Chat Record
+  updateRoomChatModel(userId, options.room.roomId, model)
 
+  const { message, uploadFileKeys, lastContext, process, systemMessage, temperature, top_p } = options
   let content: string | {
     type: string
     text?: string
